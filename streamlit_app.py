@@ -53,10 +53,19 @@ def predict_once(service_key):
     feature_frame = add_realtime_features(weather_row)
     prediction = float(model.predict(feature_frame[features])[0])
 
-    power_row = parse_xml(fetch_xml(service_key))
-    actual = float(power_row["currPwrTot"])
-    absolute_error = abs(actual - prediction)
-    absolute_percentage_error = absolute_error / abs(actual) * 100
+    actual = None
+    absolute_error = None
+    absolute_percentage_error = None
+    power_time = None
+    kpx_error = None
+    try:
+        power_row = parse_xml(fetch_xml(service_key))
+        actual = float(power_row["currPwrTot"])
+        absolute_error = abs(actual - prediction)
+        absolute_percentage_error = absolute_error / abs(actual) * 100
+        power_time = str(power_row["baseDatetime"])
+    except Exception as exc:
+        kpx_error = str(exc)
 
     weather_values = {
         field: float(feature_frame.iloc[0][field])
@@ -72,7 +81,8 @@ def predict_once(service_key):
         "absolute_error": absolute_error,
         "absolute_percentage_error": absolute_percentage_error,
         "weather_time": weather_time,
-        "power_time": str(power_row["baseDatetime"]),
+        "power_time": power_time,
+        "kpx_error": kpx_error,
         "weather": weather_values,
     }
 
@@ -115,12 +125,29 @@ result = st.session_state.last_result
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("예측 전력수요", f"{result['prediction']:,.1f} MW")
-col2.metric("현재 전력수요", f"{result['actual']:,.1f} MW")
-col3.metric("절대 오차", f"{result['absolute_error']:,.1f} MW")
-col4.metric("절대 오차율", f"{result['absolute_percentage_error']:.2f}%")
+col2.metric(
+    "현재 전력수요",
+    f"{result['actual']:,.1f} MW" if result["actual"] is not None else "조회 실패",
+)
+col3.metric(
+    "절대 오차",
+    f"{result['absolute_error']:,.1f} MW" if result["absolute_error"] is not None else "-",
+)
+col4.metric(
+    "절대 오차율",
+    f"{result['absolute_percentage_error']:.2f}%"
+    if result["absolute_percentage_error"] is not None
+    else "-",
+)
 
 st.write(f"업데이트: {st.session_state.updated_at}")
-st.write(f"기상 기준시각: {result['weather_time']} · 전력 기준시각: {result['power_time']}")
+st.write(f"기상 기준시각: {result['weather_time']} · 전력 기준시각: {result['power_time'] or '-'}")
+if result["kpx_error"]:
+    st.warning(
+        "Streamlit Cloud 서버에서 KPX 현재 전력수급 API 호출에 실패했습니다. "
+        "기상 기반 예측값은 표시되지만 실제 전력수요와의 오차 비교는 사용할 수 없습니다. "
+        "로컬 실행에서는 정상 동작할 수 있습니다."
+    )
 
 weather_df = pd.DataFrame(
     [{"variable": key, "value": value} for key, value in result["weather"].items()]
