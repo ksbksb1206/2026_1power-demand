@@ -23,7 +23,7 @@ KPX_SERVICE_KEY = "여기에_본인_KPX_API_키"
 ## 로컬 실행
 
 ```powershell
-pip install -r requirements_deploy.txt
+pip install -r requirements.txt
 $env:KPX_SERVICE_KEY="여기에_본인_KPX_API_키"
 streamlit run streamlit_app.py
 ```

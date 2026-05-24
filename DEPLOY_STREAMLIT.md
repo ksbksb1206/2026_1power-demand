@@ -12,7 +12,7 @@
 ## 배포 파일
 
 - `streamlit_app.py`
-- `requirements_deploy.txt`
+- `requirements.txt`
 - `models/lightgbm_power_demand_none.pkl`
 - `collect_current_power_supply.py`
 - `realtime_power_app.py`
